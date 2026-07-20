@@ -7,6 +7,7 @@ class ProjectCreate(BaseModel):
 
 class ProjectRead(ProjectCreate):
     id: int
+    user_id: int
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -20,6 +21,16 @@ class UserRead(BaseModel):
     id: int
     username: str
     email: str
+    is_admin: bool
     projects: list[ProjectRead] = []
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UserSummary(BaseModel):
+    id: int
+    username: str
+    email: str
+    is_admin: bool
 
     model_config = ConfigDict(from_attributes=True)

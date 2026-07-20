@@ -2,8 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
+from dependencies import require_admin
 from exceptions import UserAlreadyExistsError, UserNotFoundError
-from schemas import UserCreate, UserRead
+from models import User
+from schemas import UserCreate, UserRead, UserSummary
 from services import user_service
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -17,6 +19,11 @@ async def create_user_with_project(payload: UserCreate, db: AsyncSession = Depen
         raise HTTPException(
             status_code=409, detail="User with this username or email already exists"
         )
+
+
+@router.get("/", response_model=list[UserSummary])
+async def list_users(db: AsyncSession = Depends(get_db), _: User = Depends(require_admin)):
+    return await user_service.list_users(db)
 
 
 @router.get("/{user_id}", response_model=UserRead)
