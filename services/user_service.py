@@ -1,8 +1,9 @@
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from exceptions import UserNotFoundError
+from exceptions import UserAlreadyExistsError, UserNotFoundError
 from models import Project, User
 from schemas import UserCreate
 
@@ -11,7 +12,11 @@ async def create_user_with_project(db: AsyncSession, payload: UserCreate) -> Use
     user = User(username=payload.username, email=payload.email)
     user.projects.append(Project(name=f"{payload.username} Project"))
     db.add(user)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise UserAlreadyExistsError(payload.username, payload.email)
     await db.refresh(user, attribute_names=["projects"])
     return user
 
