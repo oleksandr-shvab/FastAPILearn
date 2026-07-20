@@ -29,3 +29,8 @@ async def get_user(db: AsyncSession, user_id: int) -> User:
     if user is None:
         raise UserNotFoundError(user_id)
     return user
+
+
+async def list_users(db: AsyncSession) -> list[User]:
+    result = await db.execute(select(User))
+    return list(result.scalars().all())
