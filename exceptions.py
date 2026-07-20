@@ -9,3 +9,8 @@ class UserAlreadyExistsError(Exception):
         self.username = username
         self.email = email
         super().__init__(f"User with username '{username}' or email '{email}' already exists")
+
+
+class InvalidCredentialsError(Exception):
+    def __init__(self):
+        super().__init__("Invalid username or password")

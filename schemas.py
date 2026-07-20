@@ -15,6 +15,7 @@ class ProjectRead(ProjectCreate):
 class UserCreate(BaseModel):
     username: str = Field(min_length=3, max_length=50)
     email: EmailStr = Field(max_length=120)
+    password: str = Field(min_length=8, max_length=72)
 
 
 class UserRead(BaseModel):
@@ -34,3 +35,8 @@ class UserSummary(BaseModel):
     is_admin: bool
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
