@@ -14,7 +14,6 @@ class ProjectRead(ProjectCreate):
 class UserCreate(BaseModel):
     username: str
     email: str
-    project: ProjectCreate
 
 
 class UserRead(BaseModel):
