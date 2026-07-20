@@ -1,0 +1,26 @@
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from exceptions import UserNotFoundError
+from models import Project, User
+from schemas import UserCreate
+
+
+async def create_user_with_project(db: AsyncSession, payload: UserCreate) -> User:
+    user = User(username=payload.username, email=payload.email)
+    user.projects.append(Project(name=f"{payload.username} Project"))
+    db.add(user)
+    await db.commit()
+    await db.refresh(user, attribute_names=["projects"])
+    return user
+
+
+async def get_user(db: AsyncSession, user_id: int) -> User:
+    result = await db.execute(
+        select(User).where(User.id == user_id).options(selectinload(User.projects))
+    )
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise UserNotFoundError(user_id)
+    return user
