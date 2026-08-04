@@ -1,13 +1,10 @@
-import os
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
 import jwt
 from starlette.concurrency import run_in_threadpool
 
-JWT_SECRET_KEY = os.environ["JWT_SECRET_KEY"]
-JWT_ALGORITHM = os.environ.get("JWT_ALGORITHM", "HS256")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+from config import settings
 
 # bcrypt only looks at the first 72 bytes of the input; longer passwords are
 # rejected up front instead of being silently truncated.
@@ -38,9 +35,9 @@ async def verify_password(password: str, hashed_password: str) -> bool:
 
 
 def create_access_token(subject: str) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.access_token_expire_minutes)
     payload = {"sub": subject, "exp": expire}
-    return jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+    return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
 
 
 def decode_access_token(token: str) -> int:
@@ -50,5 +47,5 @@ def decode_access_token(token: str) -> int:
     ValueError (subject isn't a valid user id) on any failure - callers map
     these to a 401 response.
     """
-    payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+    payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
     return int(payload["sub"])
