@@ -51,3 +51,9 @@ class UserSummary(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+
+class RegisterResponse(BaseModel):
+    user: UserRead
+    access_token: str
+    token_type: str = "bearer"

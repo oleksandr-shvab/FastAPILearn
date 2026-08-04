@@ -3,22 +3,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from dependencies import get_current_user, require_admin
-from exceptions import UserAlreadyExistsError, UserNotFoundError
+from exceptions import UserNotFoundError
 from models import User
-from schemas import UserCreate, UserRead, UserSummary
+from schemas import UserRead, UserSummary
 from services import user_service
 
 router = APIRouter(prefix="/users", tags=["users"])
-
-
-@router.post("/", response_model=UserRead, status_code=201)
-async def create_user_with_project(payload: UserCreate, db: AsyncSession = Depends(get_db)):
-    try:
-        return await user_service.create_user_with_project(db, payload)
-    except UserAlreadyExistsError:
-        raise HTTPException(
-            status_code=409, detail="User with this username or email already exists"
-        )
 
 
 @router.get("/", response_model=list[UserSummary])
