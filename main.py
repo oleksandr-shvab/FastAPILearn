@@ -13,7 +13,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan, swagger_ui_parameters={"persistAuthorization": True})
 
 app.include_router(auth.router)
 app.include_router(users.router)
