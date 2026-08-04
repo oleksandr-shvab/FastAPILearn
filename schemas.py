@@ -1,6 +1,8 @@
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 from zxcvbn import zxcvbn
 
+from security import MAX_PASSWORD_BYTES
+
 _MIN_PASSWORD_SCORE = 2  # zxcvbn scores 0 (weak) - 4 (strong)
 
 
@@ -22,6 +24,8 @@ class UserCreate(BaseModel):
 
     @model_validator(mode="after")
     def _check_password_strength(self) -> "UserCreate":
+        if len(self.password.encode("utf-8")) > MAX_PASSWORD_BYTES:
+            raise ValueError(f"password must be at most {MAX_PASSWORD_BYTES} bytes")
         result = zxcvbn(self.password, user_inputs=[self.username, self.email])
         if result["score"] < _MIN_PASSWORD_SCORE:
             warning = result["feedback"]["warning"]

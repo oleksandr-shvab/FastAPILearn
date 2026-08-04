@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 
 import bcrypt
 import jwt
+from starlette.concurrency import run_in_threadpool
 
 JWT_SECRET_KEY = os.environ["JWT_SECRET_KEY"]
 JWT_ALGORITHM = os.environ.get("JWT_ALGORITHM", "HS256")
@@ -10,22 +11,30 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", 
 
 # bcrypt only looks at the first 72 bytes of the input; longer passwords are
 # rejected up front instead of being silently truncated.
-_MAX_PASSWORD_BYTES = 72
+MAX_PASSWORD_BYTES = 72
 
 
-def hash_password(password: str) -> str:
-    if len(password.encode("utf-8")) > _MAX_PASSWORD_BYTES:
-        raise ValueError(f"password must be at most {_MAX_PASSWORD_BYTES} bytes")
+def _hash_password_sync(password: str) -> str:
+    if len(password.encode("utf-8")) > MAX_PASSWORD_BYTES:
+        raise ValueError(f"password must be at most {MAX_PASSWORD_BYTES} bytes")
     return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
-def verify_password(password: str, hashed_password: str) -> bool:
-    if len(password.encode("utf-8")) > _MAX_PASSWORD_BYTES:
+def _verify_password_sync(password: str, hashed_password: str) -> bool:
+    if len(password.encode("utf-8")) > MAX_PASSWORD_BYTES:
         return False
     try:
         return bcrypt.checkpw(password.encode("utf-8"), hashed_password.encode("utf-8"))
     except ValueError:
         return False
+
+
+async def hash_password(password: str) -> str:
+    return await run_in_threadpool(_hash_password_sync, password)
+
+
+async def verify_password(password: str, hashed_password: str) -> bool:
+    return await run_in_threadpool(_verify_password_sync, password, hashed_password)
 
 
 def create_access_token(subject: str) -> str:
