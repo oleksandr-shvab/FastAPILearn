@@ -1,6 +1,6 @@
 import jwt
 from fastapi import Depends, HTTPException
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer, OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import security
@@ -10,13 +10,11 @@ from models import User
 from services import user_service
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login", auto_error=False)
-bearer_scheme = HTTPBearer(auto_error=False)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 
 async def get_current_user(
-    oauth2_token: str | None = Depends(oauth2_scheme),
-    bearer_credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    token: str = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db),
 ) -> User:
     credentials_error = HTTPException(
@@ -24,9 +22,6 @@ async def get_current_user(
         detail="Invalid or missing user identity",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    token = oauth2_token or (bearer_credentials.credentials if bearer_credentials else None)
-    if token is None:
-        raise credentials_error
     try:
         user_id = security.decode_access_token(token)
     except (jwt.PyJWTError, ValueError):

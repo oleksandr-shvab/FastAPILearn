@@ -53,7 +53,5 @@ class Token(BaseModel):
     token_type: str = "bearer"
 
 
-class RegisterResponse(BaseModel):
+class RegisterResponse(Token):
     user: UserRead
-    access_token: str
-    token_type: str = "bearer"
