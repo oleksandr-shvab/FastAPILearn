@@ -44,8 +44,11 @@ def decode_access_token(token: str) -> int:
     """Decode and verify a JWT, returning the user id encoded in `sub`.
 
     Raises jwt.PyJWTError (invalid signature, expired, malformed, ...) or
-    ValueError (subject isn't a valid user id) on any failure - callers map
-    these to a 401 response.
+    ValueError (subject missing or isn't a valid user id) on any failure -
+    callers map these to a 401 response.
     """
     payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
-    return int(payload["sub"])
+    subject = payload.get("sub")
+    if subject is None:
+        raise ValueError("token is missing the 'sub' claim")
+    return int(subject)

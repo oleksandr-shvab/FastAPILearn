@@ -1,9 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from dependencies import get_current_user, require_admin
-from exceptions import UserNotFoundError
 from models import User
 from schemas import UserRead, UserSummary
 from services import user_service
@@ -25,7 +24,4 @@ async def get_profile(current_user: User = Depends(get_current_user)):
 async def get_user(
     user_id: int, db: AsyncSession = Depends(get_db), _: User = Depends(require_admin)
 ):
-    try:
-        return await user_service.get_user(db, user_id)
-    except UserNotFoundError:
-        raise HTTPException(status_code=404, detail="User not found")
+    return await user_service.get_user(db, user_id)

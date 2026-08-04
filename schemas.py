@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr, model_validator
 from zxcvbn import zxcvbn
 
 from security import MAX_PASSWORD_BYTES
@@ -20,13 +20,14 @@ class ProjectRead(ProjectCreate):
 class UserCreate(BaseModel):
     username: str = Field(min_length=3, max_length=50)
     email: EmailStr = Field(max_length=120)
-    password: str = Field(min_length=8, max_length=72)
+    password: SecretStr = Field(min_length=8, max_length=72)
 
     @model_validator(mode="after")
     def _check_password_strength(self) -> "UserCreate":
-        if len(self.password.encode("utf-8")) > MAX_PASSWORD_BYTES:
+        password = self.password.get_secret_value()
+        if len(password.encode("utf-8")) > MAX_PASSWORD_BYTES:
             raise ValueError(f"password must be at most {MAX_PASSWORD_BYTES} bytes")
-        result = zxcvbn(self.password, user_inputs=[self.username, self.email])
+        result = zxcvbn(password, user_inputs=[self.username, self.email])
         if result["score"] < _MIN_PASSWORD_SCORE:
             warning = result["feedback"]["warning"]
             raise ValueError(warning or "password is too weak")

@@ -13,7 +13,7 @@ async def create_user_with_project(db: AsyncSession, payload: UserCreate) -> Use
     user = User(
         username=payload.username,
         email=payload.email,
-        hashed_password=await security.hash_password(payload.password),
+        hashed_password=await security.hash_password(payload.password.get_secret_value()),
     )
     user.projects.append(Project(name=f"{payload.username} Project"))
     db.add(user)
