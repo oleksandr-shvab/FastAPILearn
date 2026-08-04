@@ -22,7 +22,10 @@ def hash_password(password: str) -> str:
 def verify_password(password: str, hashed_password: str) -> bool:
     if len(password.encode("utf-8")) > _MAX_PASSWORD_BYTES:
         return False
-    return bcrypt.checkpw(password.encode("utf-8"), hashed_password.encode("utf-8"))
+    try:
+        return bcrypt.checkpw(password.encode("utf-8"), hashed_password.encode("utf-8"))
+    except ValueError:
+        return False
 
 
 def create_access_token(subject: str) -> str:

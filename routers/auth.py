@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.security import OAuth2PasswordRequestForm
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Form, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import security
@@ -13,11 +14,12 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/login", response_model=Token)
 async def login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
+    username: Annotated[str, Form()],
+    password: Annotated[str, Form()],
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        user = await auth_service.authenticate_user(db, form_data.username, form_data.password)
+        user = await auth_service.authenticate_user(db, username, password)
     except InvalidCredentialsError:
         raise HTTPException(
             status_code=401,
