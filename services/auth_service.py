@@ -7,11 +7,8 @@ from exceptions import InvalidCredentialsError, InvalidRefreshTokenError
 from models import RefreshToken, User
 from services import user_service
 
-# Fixed hash to check the password against when the username doesn't exist,
-# so a failed lookup still pays the bcrypt cost and the response time doesn't
-# reveal whether the username is registered. Hardcoded rather than computed
-# at import time - its value is arbitrary, it just needs to be a real bcrypt
-# hash, and hash_password is async now (needs a running event loop to call).
+# Need exists to close a timing side-channel that would otherwise let an attacker figure out 
+# which usernames are registered
 _DUMMY_HASH = "$2b$12$2NzijjfzBYx6rTQmzOEYF.xZoKyzXEuw8DqXh2vJ8JlxcMM4s0ULy"
 
 
