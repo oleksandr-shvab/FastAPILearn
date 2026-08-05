@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends
+from fastapi_filter import FilterDepends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from dependencies import get_current_user, require_admin
+from filters import UserFilter
 from models import User
 from schemas import UserRead, UserSummary
 from services import user_service
@@ -11,8 +13,12 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 
 @router.get("/", response_model=list[UserSummary])
-async def list_users(db: AsyncSession = Depends(get_db), _: User = Depends(require_admin)):
-    return await user_service.list_users(db)
+async def list_users(
+    filters: UserFilter = FilterDepends(UserFilter),
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    return await user_service.list_users(db, filters)
 
 
 @router.get("/me", response_model=UserRead)

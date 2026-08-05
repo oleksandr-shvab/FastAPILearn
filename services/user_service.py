@@ -5,6 +5,7 @@ from sqlalchemy.orm import selectinload
 
 import security
 from exceptions import UserAlreadyExistsError, UserNotFoundError
+from filters import UserFilter
 from models import Project, User
 from schemas import UserCreate
 
@@ -52,8 +53,9 @@ async def get_user(db: AsyncSession, user_id: int) -> User:
     return user
 
 
-async def list_users(db: AsyncSession) -> list[User]:
-    result = await db.execute(select(User))
+async def list_users(db: AsyncSession, filters: UserFilter) -> list[User]:
+    query = filters.sort(filters.filter(select(User)))
+    result = await db.execute(query)
     return list(result.scalars().all())
 
 
