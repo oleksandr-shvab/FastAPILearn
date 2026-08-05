@@ -3,11 +3,10 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import security
 from database import get_db
-from exceptions import InvalidCredentialsError, UserAlreadyExistsError
+from exceptions import InvalidCredentialsError, InvalidRefreshTokenError, UserAlreadyExistsError
 from rate_limit import limiter
-from schemas import RegisterResponse, Token, UserCreate
+from schemas import RefreshTokenRequest, RegisterResponse, Token, UserCreate
 from services import auth_service, user_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -22,8 +21,8 @@ async def register(request: Request, payload: UserCreate, db: AsyncSession = Dep
         raise HTTPException(
             status_code=409, detail="User with this username or email already exists"
         )
-    access_token = security.create_access_token(subject=str(user.id))
-    return RegisterResponse(user=user, access_token=access_token)
+    access_token, refresh_token = await auth_service.issue_token_pair(db, user.id)
+    return RegisterResponse(user=user, access_token=access_token, refresh_token=refresh_token)
 
 
 @router.post("/login", response_model=Token)
@@ -42,5 +41,31 @@ async def login(
             detail="Invalid username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    access_token = security.create_access_token(subject=str(user.id))
-    return Token(access_token=access_token)
+    access_token, refresh_token = await auth_service.issue_token_pair(db, user.id)
+    return Token(access_token=access_token, refresh_token=refresh_token)
+
+
+@router.post("/refresh", response_model=Token)
+@limiter.limit("10/minute")
+async def refresh(
+    request: Request, payload: RefreshTokenRequest, db: AsyncSession = Depends(get_db)
+):
+    try:
+        access_token, refresh_token = await auth_service.rotate_refresh_token(
+            db, payload.refresh_token
+        )
+    except InvalidRefreshTokenError:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired refresh token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return Token(access_token=access_token, refresh_token=refresh_token)
+
+
+@router.post("/logout", status_code=204)
+@limiter.limit("10/minute")
+async def logout(
+    request: Request, payload: RefreshTokenRequest, db: AsyncSession = Depends(get_db)
+):
+    await auth_service.revoke_refresh_token(db, payload.refresh_token)

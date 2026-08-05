@@ -14,3 +14,8 @@ class UserAlreadyExistsError(Exception):
 class InvalidCredentialsError(Exception):
     def __init__(self):
         super().__init__("Invalid username or password")
+
+
+class InvalidRefreshTokenError(Exception):
+    def __init__(self):
+        super().__init__("Invalid, expired, or already used refresh token")
