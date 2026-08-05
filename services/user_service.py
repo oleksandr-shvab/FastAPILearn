@@ -26,6 +26,22 @@ async def create_user_with_project(db: AsyncSession, payload: UserCreate) -> Use
     return user
 
 
+async def create_superuser(db: AsyncSession, payload: UserCreate) -> User:
+    user = User(
+        username=payload.username,
+        email=payload.email,
+        hashed_password=await security.hash_password(payload.password.get_secret_value()),
+        is_admin=True,
+    )
+    db.add(user)
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise UserAlreadyExistsError(payload.username, payload.email)
+    return user
+
+
 async def get_user(db: AsyncSession, user_id: int) -> User:
     result = await db.execute(
         select(User).where(User.id == user_id).options(selectinload(User.projects))
