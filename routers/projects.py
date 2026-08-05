@@ -20,19 +20,13 @@ async def create_project(
 
 
 @router.get("/", response_model=list[ProjectRead])
-async def list_projects(
-    name: str | None = None,
-    user_id: int | None = None,
-    db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_admin),
-):
-    return await project_service.list_projects(db, name=name, user_id=user_id)
+async def list_projects(db: AsyncSession = Depends(get_db), _: User = Depends(require_admin)):
+    return await project_service.list_projects(db)
 
 
 @router.get("/me", response_model=list[ProjectRead])
 async def list_my_projects(
-    name: str | None = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await project_service.list_projects(db, name=name, user_id=current_user.id)
+    return await project_service.list_projects_for_user(db, current_user.id)

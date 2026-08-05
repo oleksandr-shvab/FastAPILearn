@@ -12,13 +12,11 @@ async def create_project(db: AsyncSession, payload: ProjectCreate, owner_id: int
     return project
 
 
-async def list_projects(
-    db: AsyncSession, name: str | None = None, user_id: int | None = None
-) -> list[Project]:
-    query = select(Project)
-    if name is not None:
-        query = query.where(Project.name.ilike(f"%{name}%"))
-    if user_id is not None:
-        query = query.where(Project.user_id == user_id)
-    result = await db.execute(query)
+async def list_projects(db: AsyncSession) -> list[Project]:
+    result = await db.execute(select(Project))
+    return list(result.scalars().all())
+
+
+async def list_projects_for_user(db: AsyncSession, user_id: int) -> list[Project]:
+    result = await db.execute(select(Project).where(Project.user_id == user_id))
     return list(result.scalars().all())
