@@ -65,3 +65,7 @@ class RegisterResponse(Token):
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
+
+
+class GoogleAuthRequest(BaseModel):
+    id_token: str

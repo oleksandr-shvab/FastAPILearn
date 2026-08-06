@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,6 +10,8 @@ from exceptions import UserAlreadyExistsError, UserNotFoundError
 from filters import UserFilter
 from models import Project, User
 from schemas import UserCreate
+
+_USERNAME_COLLISION_RETRIES = 3
 
 
 async def create_user_with_project(db: AsyncSession, payload: UserCreate) -> User:
@@ -62,3 +66,39 @@ async def list_users(db: AsyncSession, filters: UserFilter) -> list[User]:
 async def get_user_by_username(db: AsyncSession, username: str) -> User | None:
     result = await db.execute(select(User).where(User.username == username))
     return result.scalar_one_or_none()
+
+
+async def get_user_by_google_id(db: AsyncSession, google_id: str) -> User | None:
+    result = await db.execute(select(User).where(User.google_id == google_id))
+    return result.scalar_one_or_none()
+
+
+async def get_or_create_google_user(db: AsyncSession, google_id: str, email: str) -> User:
+    user = await get_user_by_google_id(db, google_id)
+    if user is not None:
+        return user
+
+    result = await db.execute(
+        select(User).where(User.email == email).options(selectinload(User.projects))
+    )
+    existing = result.scalar_one_or_none()
+    if existing is not None:
+        existing.google_id = google_id
+        await db.commit()
+        await db.refresh(existing, attribute_names=["projects"])
+        return existing
+
+    base_username = email.split("@", 1)[0][:50]
+    for suffix in ("", *(uuid4().hex[:6] for _ in range(_USERNAME_COLLISION_RETRIES))):
+        username = (base_username + suffix)[:50]
+        user = User(username=username, email=email, google_id=google_id)
+        user.projects.append(Project(name=f"{username} Project"))
+        db.add(user)
+        try:
+            await db.commit()
+        except IntegrityError:
+            await db.rollback()
+            continue
+        await db.refresh(user, attribute_names=["projects"])
+        return user
+    raise UserAlreadyExistsError(base_username, email)

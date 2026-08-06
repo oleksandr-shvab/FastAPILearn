@@ -14,6 +14,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(120), unique=True)
     hashed_password: Mapped[str] = mapped_column(String(255), server_default="")
     is_admin: Mapped[bool] = mapped_column(default=False, server_default="false")
+    google_id: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
 
     projects: Mapped[list["Project"]] = relationship(
         back_populates="owner", cascade="all, delete-orphan"

@@ -19,3 +19,8 @@ class InvalidCredentialsError(Exception):
 class InvalidRefreshTokenError(Exception):
     def __init__(self):
         super().__init__("Invalid, expired, or already used refresh token")
+
+
+class InvalidGoogleTokenError(Exception):
+    def __init__(self):
+        super().__init__("Invalid or unverifiable Google token")
