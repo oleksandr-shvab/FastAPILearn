@@ -1,9 +1,14 @@
 import jwt
+from google.auth.exceptions import GoogleAuthError
+from google.auth.transport import requests as google_auth_requests
+from google.oauth2 import id_token as google_id_token
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
 import security
-from exceptions import InvalidCredentialsError, InvalidRefreshTokenError
+from config import settings
+from exceptions import InvalidCredentialsError, InvalidGoogleTokenError, InvalidRefreshTokenError
 from models import RefreshToken, User
 from services import user_service
 
@@ -19,6 +24,28 @@ async def authenticate_user(db: AsyncSession, username: str, password: str) -> U
     if user is None or not is_valid:
         raise InvalidCredentialsError()
     return user
+
+
+def _verify_google_id_token_sync(id_token_str: str) -> dict:
+    return google_id_token.verify_oauth2_token(
+        id_token_str, google_auth_requests.Request(), settings.google_client_id
+    )
+
+
+async def authenticate_google_user(db: AsyncSession, id_token_str: str) -> User:
+    try:
+        payload = await run_in_threadpool(_verify_google_id_token_sync, id_token_str)
+    except (GoogleAuthError, ValueError):
+        raise InvalidGoogleTokenError()
+
+    google_id = payload.get("sub")
+    email = payload.get("email")
+    if not google_id or not email:
+        raise InvalidGoogleTokenError()
+
+    return await user_service.get_or_create_google_user(
+        db, google_id=google_id, email=email, email_verified=bool(payload.get("email_verified"))
+    )
 
 
 async def issue_token_pair(db: AsyncSession, user_id: int) -> tuple[str, str]:

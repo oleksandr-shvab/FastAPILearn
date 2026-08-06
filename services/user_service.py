@@ -69,24 +69,29 @@ async def get_user_by_username(db: AsyncSession, username: str) -> User | None:
 
 
 async def get_user_by_google_id(db: AsyncSession, google_id: str) -> User | None:
-    result = await db.execute(select(User).where(User.google_id == google_id))
+    result = await db.execute(
+        select(User).where(User.google_id == google_id).options(selectinload(User.projects))
+    )
     return result.scalar_one_or_none()
 
 
-async def get_or_create_google_user(db: AsyncSession, google_id: str, email: str) -> User:
+async def get_or_create_google_user(
+    db: AsyncSession, google_id: str, email: str, email_verified: bool
+) -> User:
     user = await get_user_by_google_id(db, google_id)
     if user is not None:
         return user
 
-    result = await db.execute(
-        select(User).where(User.email == email).options(selectinload(User.projects))
-    )
-    existing = result.scalar_one_or_none()
-    if existing is not None:
-        existing.google_id = google_id
-        await db.commit()
-        await db.refresh(existing, attribute_names=["projects"])
-        return existing
+    if email_verified:
+        result = await db.execute(
+            select(User).where(User.email == email).options(selectinload(User.projects))
+        )
+        existing = result.scalar_one_or_none()
+        if existing is not None:
+            existing.google_id = google_id
+            await db.commit()
+            await db.refresh(existing, attribute_names=["projects"])
+            return existing
 
     base_username = email.split("@", 1)[0][:50]
     for suffix in ("", *(uuid4().hex[:6] for _ in range(_USERNAME_COLLISION_RETRIES))):
