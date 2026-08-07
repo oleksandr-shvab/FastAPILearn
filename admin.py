@@ -9,7 +9,7 @@ import security
 from config import settings
 from database import AsyncSessionLocal, engine
 from exceptions import InvalidCredentialsError, UserNotFoundError
-from models import Project, RefreshToken, User
+from models import Project, ProjectMember, RefreshToken, User
 from services import auth_service, user_service
 
 
@@ -65,8 +65,13 @@ class UserAdmin(ModelView, model=User):
 
 
 class ProjectAdmin(ModelView, model=Project):
-    column_list = [Project.id, Project.name, Project.owner]
-    form_columns = [Project.name, Project.owner]
+    column_list = [Project.id, Project.name]
+    form_columns = [Project.name]
+
+
+class ProjectMemberAdmin(ModelView, model=ProjectMember):
+    column_list = [ProjectMember.id, ProjectMember.project, ProjectMember.user, ProjectMember.role]
+    form_columns = [ProjectMember.project, ProjectMember.user, ProjectMember.role]
 
 
 class RefreshTokenAdmin(ModelView, model=RefreshToken):
@@ -86,4 +91,5 @@ def init_admin(app: FastAPI) -> None:
     admin = Admin(app, engine, authentication_backend=authentication_backend)
     admin.add_view(UserAdmin)
     admin.add_view(ProjectAdmin)
+    admin.add_view(ProjectMemberAdmin)
     admin.add_view(RefreshTokenAdmin)
