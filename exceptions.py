@@ -24,3 +24,23 @@ class InvalidRefreshTokenError(Exception):
 class InvalidGoogleTokenError(Exception):
     def __init__(self):
         super().__init__("Invalid or unverifiable Google token")
+
+
+class MembershipAlreadyExistsError(Exception):
+    def __init__(self, project_id: int, user_id: int):
+        self.project_id = project_id
+        self.user_id = user_id
+        super().__init__(f"User {user_id} is already a member of project {project_id}")
+
+
+class MembershipNotFoundError(Exception):
+    def __init__(self, project_id: int, user_id: int):
+        self.project_id = project_id
+        self.user_id = user_id
+        super().__init__(f"User {user_id} is not a member of project {project_id}")
+
+
+class LastOwnerError(Exception):
+    def __init__(self, project_id: int):
+        self.project_id = project_id
+        super().__init__(f"Project {project_id} must have at least one owner")

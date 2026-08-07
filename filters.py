@@ -10,7 +10,6 @@ class ProjectFilter(Filter):
     model_config = ConfigDict(populate_by_name=True)
 
     name__ilike: Optional[str] = Field(default=None, alias="name")
-    user_id: Optional[int] = None
     order_by: Optional[list[str]] = None
 
     class Constants(Filter.Constants):

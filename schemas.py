@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr, model_validator
 from zxcvbn import zxcvbn
 
+from enums import ProjectRole
 from security import MAX_PASSWORD_BYTES
 
 _MIN_PASSWORD_SCORE = 2  # zxcvbn scores 0 (weak) - 4 (strong)
@@ -10,9 +11,46 @@ class ProjectCreate(BaseModel):
     name: str = Field(min_length=1, max_length=100)
 
 
+class ProjectMemberUser(BaseModel):
+    id: int
+    username: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProjectMemberRead(BaseModel):
+    user: ProjectMemberUser
+    role: ProjectRole
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProjectMemberCreate(BaseModel):
+    user_id: int
+    role: ProjectRole = ProjectRole.member
+
+
+class ProjectMemberRoleUpdate(BaseModel):
+    role: ProjectRole
+
+
 class ProjectRead(ProjectCreate):
     id: int
-    user_id: int
+    members: list[ProjectMemberRead] = []
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProjectSummary(BaseModel):
+    id: int
+    name: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProjectMembershipRead(BaseModel):
+    project: ProjectSummary
+    role: ProjectRole
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -39,7 +77,7 @@ class UserRead(BaseModel):
     username: str
     email: str
     is_admin: bool
-    projects: list[ProjectRead] = []
+    project_memberships: list[ProjectMembershipRead] = []
 
     model_config = ConfigDict(from_attributes=True)
 
