@@ -5,12 +5,12 @@ from starlette.requests import Request
 from wtforms import PasswordField
 from wtforms.validators import Optional as OptionalValidator
 
-import security
-from config import settings
-from database import AsyncSessionLocal, engine
-from exceptions import InvalidCredentialsError, UserNotFoundError
-from models import Project, RefreshToken, User
-from services import auth_service, user_service
+from app.core import security
+from app.core.config import settings
+from app.core.db import AsyncSessionLocal, engine
+from app.crud import auth as auth_crud, user as user_crud
+from app.exceptions import InvalidCredentialsError, UserNotFoundError
+from app.models import Project, RefreshToken, User
 
 
 class AdminAuth(AuthenticationBackend):
@@ -19,7 +19,7 @@ class AdminAuth(AuthenticationBackend):
         username, password = form["username"], form["password"]
         async with AsyncSessionLocal() as db:
             try:
-                user = await auth_service.authenticate_user(db, str(username), str(password))
+                user = await auth_crud.authenticate_user(db, str(username), str(password))
             except InvalidCredentialsError:
                 return False
             if not user.is_admin:
@@ -37,7 +37,7 @@ class AdminAuth(AuthenticationBackend):
             return False
         async with AsyncSessionLocal() as db:
             try:
-                user = await user_service.get_user(db, user_id)
+                user = await user_crud.get_user(db, user_id)
             except UserNotFoundError:
                 return False
         return user.is_admin

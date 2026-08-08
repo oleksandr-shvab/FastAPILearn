@@ -6,11 +6,11 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from admin import init_admin
-from database import Base, engine
-from exceptions import UserNotFoundError
-from rate_limit import limiter
-from routers import auth, projects, users
+from app.admin import init_admin
+from app.api.main import api_router
+from app.core.db import Base, engine
+from app.core.rate_limit import limiter
+from app.exceptions import AppError
 
 
 @asynccontextmanager
@@ -29,11 +29,13 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
 
-@app.exception_handler(UserNotFoundError)
-async def user_not_found_handler(request: Request, exc: UserNotFoundError) -> JSONResponse:
-    return JSONResponse(status_code=404, content={"detail": "User not found"})
+@app.exception_handler(AppError)
+async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"code": exc.code, "detail": exc.message},
+        headers=exc.headers,
+    )
 
 
-app.include_router(auth.router)
-app.include_router(users.router)
-app.include_router(projects.router)
+app.include_router(api_router)

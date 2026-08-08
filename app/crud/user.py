@@ -3,10 +3,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-import security
-from exceptions import UserAlreadyExistsError, UserNotFoundError
-from models import Project, User
-from schemas import UserCreate
+from app.core import security
+from app.exceptions import UserAlreadyExistsError, UserNotFoundError
+from app.models import Project, User
+from app.schemas import UserCreate, UserSummary
 
 
 async def create_user_with_project(db: AsyncSession, payload: UserCreate) -> User:
@@ -52,9 +52,10 @@ async def get_user(db: AsyncSession, user_id: int) -> User:
     return user
 
 
-async def list_users(db: AsyncSession) -> list[User]:
-    result = await db.execute(select(User))
-    return list(result.scalars().all())
+async def list_users(session: AsyncSession) -> list[UserSummary]:
+    query = select(User)
+    result = await session.execute(query)
+    return [UserSummary.model_validate(user) for user in result.scalars().all()]
 
 
 async def get_user_by_username(db: AsyncSession, username: str) -> User | None:
