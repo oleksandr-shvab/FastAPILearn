@@ -4,7 +4,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import security
 from app.crud import user as user_crud
-from app.exceptions import InvalidCredentialsError, InvalidRefreshTokenError
+from app.exceptions import (
+    InvalidCredentialsError,
+    InvalidGoogleTokenError,
+    InvalidRefreshTokenError,
+)
 from app.models import RefreshToken, User
 
 # Need exists to close a timing side-channel that would otherwise let an attacker figure out
@@ -19,6 +23,21 @@ async def authenticate_user(db: AsyncSession, username: str, password: str) -> U
     if user is None or not is_valid:
         raise InvalidCredentialsError()
     return user
+
+
+async def authenticate_google_user(db: AsyncSession, userinfo: dict) -> User:
+    google_id = userinfo.get("sub")
+    email = userinfo.get("email")
+    if not google_id or not email:
+        raise InvalidGoogleTokenError()
+
+    return await user_crud.get_or_create_oauth_user(
+        db,
+        provider="google",
+        provider_user_id=google_id,
+        email=email,
+        email_verified=bool(userinfo.get("email_verified")),
+    )
 
 
 async def issue_token_pair(db: AsyncSession, user_id: int) -> tuple[str, str]:

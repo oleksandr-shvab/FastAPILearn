@@ -5,9 +5,11 @@ from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 
 from app.admin import init_admin
 from app.api.main import api_router
+from app.core.config import settings
 from app.core.db import Base, engine
 from app.core.rate_limit import limiter
 from app.exceptions import AppError
@@ -27,6 +29,7 @@ init_admin(app)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
+app.add_middleware(SessionMiddleware, secret_key=settings.jwt_secret_key)
 
 
 @app.exception_handler(AppError)

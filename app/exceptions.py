@@ -46,3 +46,9 @@ class InvalidRefreshTokenError(AppError):
     headers = {"WWW-Authenticate": "Bearer"}
     code = "invalid_refresh_token"
     message_template = "Invalid, expired, or already used refresh token"
+
+
+class InvalidGoogleTokenError(AppError):
+    status_code = 401
+    code = "invalid_google_token"
+    message_template = "Invalid or unverifiable Google token"
