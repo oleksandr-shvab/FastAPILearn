@@ -3,12 +3,12 @@ from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import security
-from database import get_db
-from enums import ProjectRole
-from exceptions import UserNotFoundError
-from models import ProjectMember, User
-from services import project_service, user_service
+from app.core import security
+from app.core.db import get_db
+from app.crud import project as project_crud, user as user_crud
+from app.enums import ProjectRole
+from app.exceptions import UserNotFoundError
+from app.models import ProjectMember, User
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
@@ -28,7 +28,7 @@ async def get_current_user(
     except (jwt.PyJWTError, ValueError):
         raise credentials_error
     try:
-        return await user_service.get_user(db, user_id)
+        return await user_crud.get_user(db, user_id)
     except UserNotFoundError:
         raise credentials_error
 
@@ -45,7 +45,7 @@ def require_project_role(*roles: ProjectRole):
         current_user: User = Depends(get_current_user),
         db: AsyncSession = Depends(get_db),
     ) -> ProjectMember:
-        membership = await project_service.get_membership(db, project_id, current_user.id)
+        membership = await project_crud.get_membership(db, project_id, current_user.id)
         if membership is None:
             raise HTTPException(status_code=404, detail="Project not found")
         if roles and membership.role not in roles:

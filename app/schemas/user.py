@@ -1,58 +1,10 @@
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr, model_validator
 from zxcvbn import zxcvbn
 
-from enums import ProjectRole
-from security import MAX_PASSWORD_BYTES
+from app.core.security import MAX_PASSWORD_BYTES
+from app.schemas.project import ProjectMembershipRead
 
 _MIN_PASSWORD_SCORE = 2  # zxcvbn scores 0 (weak) - 4 (strong)
-
-
-class ProjectCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=100)
-
-
-class ProjectMemberUser(BaseModel):
-    id: int
-    username: str
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class ProjectMemberRead(BaseModel):
-    user: ProjectMemberUser
-    role: ProjectRole
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class ProjectMemberCreate(BaseModel):
-    user_id: int
-    role: ProjectRole = ProjectRole.member
-
-
-class ProjectMemberRoleUpdate(BaseModel):
-    role: ProjectRole
-
-
-class ProjectRead(ProjectCreate):
-    id: int
-    members: list[ProjectMemberRead] = []
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class ProjectSummary(BaseModel):
-    id: int
-    name: str
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class ProjectMembershipRead(BaseModel):
-    project: ProjectSummary
-    role: ProjectRole
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 class UserCreate(BaseModel):
@@ -89,21 +41,3 @@ class UserSummary(BaseModel):
     is_admin: bool
 
     model_config = ConfigDict(from_attributes=True)
-
-
-class Token(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
-
-
-class RegisterResponse(Token):
-    user: UserRead
-
-
-class RefreshTokenRequest(BaseModel):
-    refresh_token: str
-
-
-class GoogleAuthRequest(BaseModel):
-    id_token: str

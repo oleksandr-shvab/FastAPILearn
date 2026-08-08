@@ -1,7 +1,7 @@
 """add project_members table
 
 Revision ID: 0c7e8a2d5c55
-Revises: 5da23629c0bd
+Revises: 8db3d186dce9
 Create Date: 2026-08-07 14:34:15.562903
 
 """
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = '0c7e8a2d5c55'
-down_revision: Union[str, Sequence[str], None] = '5da23629c0bd'
+down_revision: Union[str, Sequence[str], None] = '8db3d186dce9'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

@@ -1,24 +1,23 @@
 import jwt
-from google.auth.exceptions import GoogleAuthError
-from google.auth.transport import requests as google_auth_requests
-from google.oauth2 import id_token as google_id_token
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from starlette.concurrency import run_in_threadpool
 
-import security
-from config import settings
-from exceptions import InvalidCredentialsError, InvalidGoogleTokenError, InvalidRefreshTokenError
-from models import RefreshToken, User
-from services import user_service
+from app.core import security
+from app.crud import user as user_crud
+from app.exceptions import (
+    InvalidCredentialsError,
+    InvalidGoogleTokenError,
+    InvalidRefreshTokenError,
+)
+from app.models import RefreshToken, User
 
-# Need exists to close a timing side-channel that would otherwise let an attacker figure out 
+# Need exists to close a timing side-channel that would otherwise let an attacker figure out
 # which usernames are registered
 _DUMMY_HASH = "$2b$12$2NzijjfzBYx6rTQmzOEYF.xZoKyzXEuw8DqXh2vJ8JlxcMM4s0ULy"
 
 
 async def authenticate_user(db: AsyncSession, username: str, password: str) -> User:
-    user = await user_service.get_user_by_username(db, username)
+    user = await user_crud.get_user_by_username(db, username)
     hashed_password = user.hashed_password if user else _DUMMY_HASH
     is_valid = await security.verify_password(password, hashed_password)
     if user is None or not is_valid:
@@ -26,25 +25,18 @@ async def authenticate_user(db: AsyncSession, username: str, password: str) -> U
     return user
 
 
-def _verify_google_id_token_sync(id_token_str: str) -> dict:
-    return google_id_token.verify_oauth2_token(
-        id_token_str, google_auth_requests.Request(), settings.google_client_id
-    )
-
-
-async def authenticate_google_user(db: AsyncSession, id_token_str: str) -> User:
-    try:
-        payload = await run_in_threadpool(_verify_google_id_token_sync, id_token_str)
-    except (GoogleAuthError, ValueError):
-        raise InvalidGoogleTokenError()
-
-    google_id = payload.get("sub")
-    email = payload.get("email")
+async def authenticate_google_user(db: AsyncSession, userinfo: dict) -> User:
+    google_id = userinfo.get("sub")
+    email = userinfo.get("email")
     if not google_id or not email:
         raise InvalidGoogleTokenError()
 
-    return await user_service.get_or_create_google_user(
-        db, google_id=google_id, email=email, email_verified=bool(payload.get("email_verified"))
+    return await user_crud.get_or_create_oauth_user(
+        db,
+        provider="google",
+        provider_user_id=google_id,
+        email=email,
+        email_verified=bool(userinfo.get("email_verified")),
     )
 
 

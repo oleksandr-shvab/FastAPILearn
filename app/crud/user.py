@@ -5,12 +5,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-import security
-from enums import ProjectRole
-from exceptions import UserAlreadyExistsError, UserNotFoundError
-from filters import UserFilter
-from models import Project, ProjectMember, User
-from schemas import UserCreate
+from app.core import security
+from app.enums import ProjectRole
+from app.exceptions import UserAlreadyExistsError, UserNotFoundError
+from app.filters import UserFilterParams
+from app.models import OAuthAccount, Project, ProjectMember, User
+from app.schemas import UserCreate, UserSummary
+from app.utils import apply_filters, apply_ordering
 
 _USERNAME_COLLISION_RETRIES = 3
 
@@ -61,10 +62,11 @@ async def get_user(db: AsyncSession, user_id: int) -> User:
     return user
 
 
-async def list_users(db: AsyncSession, filters: UserFilter) -> list[User]:
-    query = filters.sort(filters.filter(select(User)))
-    result = await db.execute(query)
-    return list(result.scalars().all())
+async def list_users(session: AsyncSession, filters: UserFilterParams) -> list[UserSummary]:
+    query = apply_filters(select(User), User, filters)
+    query = apply_ordering(query, User, filters.order_by)
+    result = await session.execute(query)
+    return [UserSummary.model_validate(user) for user in result.scalars().all()]
 
 
 async def get_user_by_username(db: AsyncSession, username: str) -> User | None:
@@ -72,19 +74,25 @@ async def get_user_by_username(db: AsyncSession, username: str) -> User | None:
     return result.scalar_one_or_none()
 
 
-async def get_user_by_google_id(db: AsyncSession, google_id: str) -> User | None:
+async def get_user_by_oauth_account(
+    db: AsyncSession, provider: str, provider_user_id: str
+) -> User | None:
     result = await db.execute(
         select(User)
-        .where(User.google_id == google_id)
+        .join(OAuthAccount)
+        .where(
+            OAuthAccount.provider == provider,
+            OAuthAccount.provider_user_id == provider_user_id,
+        )
         .options(selectinload(User.project_memberships).selectinload(ProjectMember.project))
     )
     return result.scalar_one_or_none()
 
 
-async def get_or_create_google_user(
-    db: AsyncSession, google_id: str, email: str, email_verified: bool
+async def get_or_create_oauth_user(
+    db: AsyncSession, provider: str, provider_user_id: str, email: str, email_verified: bool
 ) -> User:
-    user = await get_user_by_google_id(db, google_id)
+    user = await get_user_by_oauth_account(db, provider, provider_user_id)
     if user is not None:
         return user
 
@@ -96,17 +104,20 @@ async def get_or_create_google_user(
         )
         existing = result.scalar_one_or_none()
         if existing is not None:
-            existing.google_id = google_id
+            existing.oauth_accounts.append(
+                OAuthAccount(provider=provider, provider_user_id=provider_user_id)
+            )
             await db.commit()
             return existing
 
     base_username = email.split("@", 1)[0][:50]
     for suffix in ("", *(uuid4().hex[:6] for _ in range(_USERNAME_COLLISION_RETRIES))):
         username = (base_username + suffix)[:50]
-        user = User(username=username, email=email, google_id=google_id)
+        user = User(username=username, email=email)
         user.project_memberships.append(
             ProjectMember(project=Project(name=f"{username} Project"), role=ProjectRole.owner)
         )
+        user.oauth_accounts.append(OAuthAccount(provider=provider, provider_user_id=provider_user_id))
         db.add(user)
         try:
             await db.commit()
