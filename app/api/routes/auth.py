@@ -1,15 +1,16 @@
 from typing import Annotated
 
+from authlib.integrations.base_client import OAuthError
 from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.core.db import get_db
+from app.core.oauth import oauth
 from app.core.rate_limit import limiter
 from app.crud import auth as auth_crud, user as user_crud
-from app.schemas import GoogleAuthRequest, RefreshTokenRequest, RegisterResponse, Token, UserCreate
+from app.exceptions import InvalidGoogleTokenError
+from app.schemas import RefreshTokenRequest, RegisterResponse, Token, UserCreate
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 templates = Jinja2Templates(directory="templates")
@@ -36,23 +37,31 @@ async def login(
     return Token(access_token=access_token, refresh_token=refresh_token)
 
 
-@router.get("/google", response_class=HTMLResponse, include_in_schema=False)
-async def google_login_page(request: Request):
+@router.get("/google/login", include_in_schema=False)
+async def google_login(request: Request):
+    redirect_uri = request.url_for("google_callback")
+    return await oauth.google.authorize_redirect(request, redirect_uri)
+
+
+@router.get("/google/callback", include_in_schema=False, name="google_callback")
+@limiter.limit("5/minute")
+async def google_callback(request: Request, db: AsyncSession = Depends(get_db)):
+    try:
+        token = await oauth.google.authorize_access_token(request)
+    except OAuthError:
+        raise InvalidGoogleTokenError()
+
+    userinfo = token.get("userinfo")
+    if not userinfo:
+        raise InvalidGoogleTokenError()
+
+    user = await auth_crud.authenticate_google_user(db, userinfo)
+    access_token, refresh_token = await auth_crud.issue_token_pair(db, user.id)
     return templates.TemplateResponse(
         request=request,
-        name="google_login.html",
-        context={"google_client_id": settings.google_client_id},
+        name="google_auth_result.html",
+        context={"access_token": access_token, "refresh_token": refresh_token},
     )
-
-
-@router.post("/google", response_model=RegisterResponse)
-@limiter.limit("5/minute")
-async def google_login(
-    request: Request, payload: GoogleAuthRequest, db: AsyncSession = Depends(get_db)
-):
-    user = await auth_crud.authenticate_google_user(db, payload.id_token)
-    access_token, refresh_token = await auth_crud.issue_token_pair(db, user.id)
-    return RegisterResponse(user=user, access_token=access_token, refresh_token=refresh_token)
 
 
 @router.post("/refresh", response_model=Token)
