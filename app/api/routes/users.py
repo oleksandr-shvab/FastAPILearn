@@ -1,9 +1,12 @@
-from fastapi import APIRouter, Depends
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, require_admin
 from app.core.db import get_db
 from app.crud import user as user_crud
+from app.filters import UserFilterParams
 from app.models import User
 from app.schemas import UserRead, UserSummary
 
@@ -11,8 +14,12 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 
 @router.get("/", response_model=list[UserSummary])
-async def list_users(db: AsyncSession = Depends(get_db), _: User = Depends(require_admin)):
-    return await user_crud.list_users(db)
+async def list_users(
+    filters: Annotated[UserFilterParams, Query()],
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    return await user_crud.list_users(db, filters)
 
 
 @router.get("/me", response_model=UserRead)

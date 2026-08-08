@@ -10,3 +10,6 @@ bcrypt==5.0.0
 zxcvbn==4.5.0
 python-multipart==0.0.20
 slowapi==0.1.10
+sqladmin==0.30.0
+itsdangerous==2.2.0
+typer==0.27.1
