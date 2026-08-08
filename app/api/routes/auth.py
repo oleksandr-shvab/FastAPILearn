@@ -37,13 +37,23 @@ async def login(
     return Token(access_token=access_token, refresh_token=refresh_token)
 
 
-@router.get("/google/login", include_in_schema=False)
+@router.get(
+    "/google/login",
+    summary="Google login",
+    description="Open this URL directly in a browser to start Google sign-in "
+    "(redirects to Google's consent screen). Not usable via 'Try it out' - it "
+    "isn't a JSON call, it's a browser redirect.",
+)
 async def google_login(request: Request):
     redirect_uri = request.url_for("google_callback")
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
 
-@router.get("/google/callback", include_in_schema=False, name="google_callback")
+@router.get(
+    "/google/callback",
+    name="google_callback",
+    include_in_schema=False,  # only reachable via Google's redirect after /google/login
+)
 @limiter.limit("5/minute")
 async def google_callback(request: Request, db: AsyncSession = Depends(get_db)):
     try:
