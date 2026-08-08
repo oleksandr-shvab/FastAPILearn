@@ -6,7 +6,7 @@ import bcrypt
 import jwt
 from starlette.concurrency import run_in_threadpool
 
-from config import settings
+from app.core.config import settings
 
 # bcrypt only looks at the first 72 bytes of the input; longer passwords are
 # rejected up front instead of being silently truncated.

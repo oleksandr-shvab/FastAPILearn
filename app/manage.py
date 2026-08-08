@@ -3,10 +3,10 @@ import asyncio
 import typer
 from pydantic import SecretStr, ValidationError
 
-from database import AsyncSessionLocal
-from exceptions import UserAlreadyExistsError
-from schemas import UserCreate
-from services import user_service
+from app.core.db import AsyncSessionLocal
+from app.crud import user as user_crud
+from app.exceptions import UserAlreadyExistsError
+from app.schemas import UserCreate
 
 app = typer.Typer(help="Management commands")
 
@@ -33,7 +33,7 @@ def createsuperuser(
 
     async def _create():
         async with AsyncSessionLocal() as db:
-            return await user_service.create_superuser(db, payload)
+            return await user_crud.create_superuser(db, payload)
 
     try:
         user = asyncio.run(_create())

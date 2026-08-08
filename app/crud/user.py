@@ -5,11 +5,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-import security
-from exceptions import UserAlreadyExistsError, UserNotFoundError
-from filters import UserFilter
-from models import Project, User
-from schemas import UserCreate
+from app.core import security
+from app.exceptions import UserAlreadyExistsError, UserNotFoundError
+from app.filters import UserFilterParams
+from app.models import Project, User
+from app.schemas import UserCreate, UserSummary
+from app.utils import apply_filters, apply_ordering
 
 _USERNAME_COLLISION_RETRIES = 3
 
@@ -57,10 +58,11 @@ async def get_user(db: AsyncSession, user_id: int) -> User:
     return user
 
 
-async def list_users(db: AsyncSession, filters: UserFilter) -> list[User]:
-    query = filters.sort(filters.filter(select(User)))
-    result = await db.execute(query)
-    return list(result.scalars().all())
+async def list_users(session: AsyncSession, filters: UserFilterParams) -> list[UserSummary]:
+    query = apply_filters(select(User), User, filters)
+    query = apply_ordering(query, User, filters.order_by)
+    result = await session.execute(query)
+    return [UserSummary.model_validate(user) for user in result.scalars().all()]
 
 
 async def get_user_by_username(db: AsyncSession, username: str) -> User | None:

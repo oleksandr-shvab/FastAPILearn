@@ -6,19 +6,23 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
-import security
-from config import settings
-from exceptions import InvalidCredentialsError, InvalidGoogleTokenError, InvalidRefreshTokenError
-from models import RefreshToken, User
-from services import user_service
+from app.core import security
+from app.core.config import settings
+from app.crud import user as user_crud
+from app.exceptions import (
+    InvalidCredentialsError,
+    InvalidGoogleTokenError,
+    InvalidRefreshTokenError,
+)
+from app.models import RefreshToken, User
 
-# Need exists to close a timing side-channel that would otherwise let an attacker figure out 
+# Need exists to close a timing side-channel that would otherwise let an attacker figure out
 # which usernames are registered
 _DUMMY_HASH = "$2b$12$2NzijjfzBYx6rTQmzOEYF.xZoKyzXEuw8DqXh2vJ8JlxcMM4s0ULy"
 
 
 async def authenticate_user(db: AsyncSession, username: str, password: str) -> User:
-    user = await user_service.get_user_by_username(db, username)
+    user = await user_crud.get_user_by_username(db, username)
     hashed_password = user.hashed_password if user else _DUMMY_HASH
     is_valid = await security.verify_password(password, hashed_password)
     if user is None or not is_valid:
@@ -43,7 +47,7 @@ async def authenticate_google_user(db: AsyncSession, id_token_str: str) -> User:
     if not google_id or not email:
         raise InvalidGoogleTokenError()
 
-    return await user_service.get_or_create_google_user(
+    return await user_crud.get_or_create_google_user(
         db, google_id=google_id, email=email, email_verified=bool(payload.get("email_verified"))
     )
 
