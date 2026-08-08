@@ -2,6 +2,11 @@ fastapi==0.139.2
 uvicorn==0.51.0
 sqlalchemy==2.0.51
 asyncpg==0.31.0
-python-dotenv==1.2.2
+pydantic-settings==2.14.2
 alembic==1.18.5
 email-validator==2.3.0
+pyjwt==2.13.0
+bcrypt==5.0.0
+zxcvbn==4.5.0
+python-multipart==0.0.20
+slowapi==0.1.10

@@ -1,7 +1,13 @@
-from sqlalchemy import ForeignKey, String
+from typing import TYPE_CHECKING
+
+from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from database import Base
+from app.core.db import Base
+
+if TYPE_CHECKING:
+    from app.models.auth import RefreshToken
+    from app.models.project import Project
 
 
 class User(Base):
@@ -10,18 +16,12 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     username: Mapped[str] = mapped_column(String(50), unique=True)
     email: Mapped[str] = mapped_column(String(120), unique=True)
+    hashed_password: Mapped[str] = mapped_column(String(255), server_default="")
     is_admin: Mapped[bool] = mapped_column(default=False, server_default="false")
 
     projects: Mapped[list["Project"]] = relationship(
         back_populates="owner", cascade="all, delete-orphan"
     )
-
-
-class Project(Base):
-    __tablename__ = "projects"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(100))
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-
-    owner: Mapped["User"] = relationship(back_populates="projects")
+    refresh_tokens: Mapped[list["RefreshToken"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )

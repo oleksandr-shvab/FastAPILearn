@@ -3,13 +3,18 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from exceptions import UserAlreadyExistsError, UserNotFoundError
-from models import Project, User
-from schemas import UserCreate
+from app.core import security
+from app.exceptions import UserAlreadyExistsError, UserNotFoundError
+from app.models import Project, User
+from app.schemas import UserCreate, UserSummary
 
 
 async def create_user_with_project(db: AsyncSession, payload: UserCreate) -> User:
-    user = User(username=payload.username, email=payload.email)
+    user = User(
+        username=payload.username,
+        email=payload.email,
+        hashed_password=await security.hash_password(payload.password.get_secret_value()),
+    )
     user.projects.append(Project(name=f"{payload.username} Project"))
     db.add(user)
     try:
@@ -31,6 +36,12 @@ async def get_user(db: AsyncSession, user_id: int) -> User:
     return user
 
 
-async def list_users(db: AsyncSession) -> list[User]:
-    result = await db.execute(select(User))
-    return list(result.scalars().all())
+async def list_users(session: AsyncSession) -> list[UserSummary]:
+    query = select(User)
+    result = await session.execute(query)
+    return [UserSummary.model_validate(user) for user in result.scalars().all()]
+
+
+async def get_user_by_username(db: AsyncSession, username: str) -> User | None:
+    result = await db.execute(select(User).where(User.username == username))
+    return result.scalar_one_or_none()
