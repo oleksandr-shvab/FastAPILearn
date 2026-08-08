@@ -6,10 +6,10 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from database import Base, engine
-from exceptions import AppError
-from rate_limit import limiter
-from routers import auth, projects, users
+from app.api.main import api_router
+from app.core.db import Base, engine
+from app.core.rate_limit import limiter
+from app.exceptions import AppError
 
 
 @asynccontextmanager
@@ -35,6 +35,4 @@ async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
     )
 
 
-app.include_router(auth.router)
-app.include_router(users.router)
-app.include_router(projects.router)
+app.include_router(api_router)

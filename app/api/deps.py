@@ -3,11 +3,11 @@ from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import security
-from database import get_db
-from exceptions import UserNotFoundError
-from models import User
-from services import user_service
+from app.core import security
+from app.core.db import get_db
+from app.crud import user as user_crud
+from app.exceptions import UserNotFoundError
+from app.models import User
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
@@ -27,7 +27,7 @@ async def get_current_user(
     except (jwt.PyJWTError, ValueError):
         raise credentials_error
     try:
-        return await user_service.get_user(db, user_id)
+        return await user_crud.get_user(db, user_id)
     except UserNotFoundError:
         raise credentials_error
 

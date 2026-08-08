@@ -2,18 +2,18 @@ import jwt
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import security
-from exceptions import InvalidCredentialsError, InvalidRefreshTokenError
-from models import RefreshToken, User
-from services import user_service
+from app.core import security
+from app.crud import user as user_crud
+from app.exceptions import InvalidCredentialsError, InvalidRefreshTokenError
+from app.models import RefreshToken, User
 
-# Need exists to close a timing side-channel that would otherwise let an attacker figure out 
+# Need exists to close a timing side-channel that would otherwise let an attacker figure out
 # which usernames are registered
 _DUMMY_HASH = "$2b$12$2NzijjfzBYx6rTQmzOEYF.xZoKyzXEuw8DqXh2vJ8JlxcMM4s0ULy"
 
 
 async def authenticate_user(db: AsyncSession, username: str, password: str) -> User:
-    user = await user_service.get_user_by_username(db, username)
+    user = await user_crud.get_user_by_username(db, username)
     hashed_password = user.hashed_password if user else _DUMMY_HASH
     is_valid = await security.verify_password(password, hashed_password)
     if user is None or not is_valid:

@@ -3,10 +3,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-import security
-from exceptions import UserAlreadyExistsError, UserNotFoundError
-from models import Project, User
-from schemas import UserCreate
+from app.core import security
+from app.exceptions import UserAlreadyExistsError, UserNotFoundError
+from app.models import Project, User
+from app.schemas import UserCreate
 
 
 async def create_user_with_project(db: AsyncSession, payload: UserCreate) -> User:
