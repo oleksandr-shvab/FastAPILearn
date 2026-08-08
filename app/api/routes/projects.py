@@ -2,12 +2,12 @@ from fastapi import APIRouter, Depends
 from fastapi_filter import FilterDepends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import get_db
-from dependencies import get_current_user, require_admin
-from filters import ProjectFilter
-from models import User
-from schemas import ProjectCreate, ProjectRead
-from services import project_service
+from app.api.deps import get_current_user, require_admin
+from app.core.db import get_db
+from app.crud import project as project_crud
+from app.filters import ProjectFilter
+from app.models import User
+from app.schemas import ProjectCreate, ProjectRead
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -18,7 +18,7 @@ async def create_project(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await project_service.create_project(db, payload, current_user.id)
+    return await project_crud.create_project(db, payload, current_user.id)
 
 
 @router.get("/", response_model=list[ProjectRead])
@@ -27,7 +27,7 @@ async def list_projects(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ):
-    return await project_service.list_projects(db, filters)
+    return await project_crud.list_projects(db, filters)
 
 
 @router.get("/me", response_model=list[ProjectRead])
@@ -36,4 +36,4 @@ async def list_my_projects(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await project_service.list_projects_for_user(db, current_user.id, filters)
+    return await project_crud.list_projects_for_user(db, current_user.id, filters)

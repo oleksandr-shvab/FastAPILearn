@@ -1,20 +1,10 @@
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr, model_validator
 from zxcvbn import zxcvbn
 
-from security import MAX_PASSWORD_BYTES
+from app.core.security import MAX_PASSWORD_BYTES
+from app.schemas.project import ProjectRead
 
 _MIN_PASSWORD_SCORE = 2  # zxcvbn scores 0 (weak) - 4 (strong)
-
-
-class ProjectCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=100)
-
-
-class ProjectRead(ProjectCreate):
-    id: int
-    user_id: int
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 class UserCreate(BaseModel):
@@ -51,17 +41,3 @@ class UserSummary(BaseModel):
     is_admin: bool
 
     model_config = ConfigDict(from_attributes=True)
-
-
-class Token(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
-
-
-class RegisterResponse(Token):
-    user: UserRead
-
-
-class RefreshTokenRequest(BaseModel):
-    refresh_token: str

@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi_filter.contrib.sqlalchemy import Filter
 from pydantic import ConfigDict, Field
 
-from models import Project, User
+from app.models import Project, User
 
 
 class ProjectFilter(Filter):
