@@ -8,7 +8,7 @@ from sqlalchemy.orm import selectinload
 from app.core import security
 from app.exceptions import UserAlreadyExistsError, UserNotFoundError
 from app.filters import UserFilterParams
-from app.models import Project, User
+from app.models import OAuthAccount, Project, User
 from app.schemas import UserCreate, UserSummary
 from app.utils import apply_filters, apply_ordering
 
@@ -70,17 +70,25 @@ async def get_user_by_username(db: AsyncSession, username: str) -> User | None:
     return result.scalar_one_or_none()
 
 
-async def get_user_by_google_id(db: AsyncSession, google_id: str) -> User | None:
+async def get_user_by_oauth_account(
+    db: AsyncSession, provider: str, provider_user_id: str
+) -> User | None:
     result = await db.execute(
-        select(User).where(User.google_id == google_id).options(selectinload(User.projects))
+        select(User)
+        .join(OAuthAccount)
+        .where(
+            OAuthAccount.provider == provider,
+            OAuthAccount.provider_user_id == provider_user_id,
+        )
+        .options(selectinload(User.projects))
     )
     return result.scalar_one_or_none()
 
 
-async def get_or_create_google_user(
-    db: AsyncSession, google_id: str, email: str, email_verified: bool
+async def get_or_create_oauth_user(
+    db: AsyncSession, provider: str, provider_user_id: str, email: str, email_verified: bool
 ) -> User:
-    user = await get_user_by_google_id(db, google_id)
+    user = await get_user_by_oauth_account(db, provider, provider_user_id)
     if user is not None:
         return user
 
@@ -90,7 +98,9 @@ async def get_or_create_google_user(
         )
         existing = result.scalar_one_or_none()
         if existing is not None:
-            existing.google_id = google_id
+            existing.oauth_accounts.append(
+                OAuthAccount(provider=provider, provider_user_id=provider_user_id)
+            )
             await db.commit()
             await db.refresh(existing, attribute_names=["projects"])
             return existing
@@ -98,8 +108,9 @@ async def get_or_create_google_user(
     base_username = email.split("@", 1)[0][:50]
     for suffix in ("", *(uuid4().hex[:6] for _ in range(_USERNAME_COLLISION_RETRIES))):
         username = (base_username + suffix)[:50]
-        user = User(username=username, email=email, google_id=google_id)
+        user = User(username=username, email=email)
         user.projects.append(Project(name=f"{username} Project"))
+        user.oauth_accounts.append(OAuthAccount(provider=provider, provider_user_id=provider_user_id))
         db.add(user)
         try:
             await db.commit()

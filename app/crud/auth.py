@@ -31,8 +31,12 @@ async def authenticate_google_user(db: AsyncSession, userinfo: dict) -> User:
     if not google_id or not email:
         raise InvalidGoogleTokenError()
 
-    return await user_crud.get_or_create_google_user(
-        db, google_id=google_id, email=email, email_verified=bool(userinfo.get("email_verified"))
+    return await user_crud.get_or_create_oauth_user(
+        db,
+        provider="google",
+        provider_user_id=google_id,
+        email=email,
+        email_verified=bool(userinfo.get("email_verified")),
     )
 
 
