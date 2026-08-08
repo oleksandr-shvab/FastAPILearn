@@ -1,11 +1,12 @@
-from fastapi import APIRouter, Depends
-from fastapi_filter import FilterDepends
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, require_admin
 from app.core.db import get_db
 from app.crud import project as project_crud
-from app.filters import ProjectFilter
+from app.filters import ProjectFilterParams
 from app.models import User
 from app.schemas import ProjectCreate, ProjectRead
 
@@ -23,7 +24,7 @@ async def create_project(
 
 @router.get("/", response_model=list[ProjectRead])
 async def list_projects(
-    filters: ProjectFilter = FilterDepends(ProjectFilter),
+    filters: Annotated[ProjectFilterParams, Query()],
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ):
@@ -32,7 +33,7 @@ async def list_projects(
 
 @router.get("/me", response_model=list[ProjectRead])
 async def list_my_projects(
-    filters: ProjectFilter = FilterDepends(ProjectFilter),
+    filters: Annotated[ProjectFilterParams, Query()],
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):

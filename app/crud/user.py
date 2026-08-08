@@ -5,9 +5,10 @@ from sqlalchemy.orm import selectinload
 
 from app.core import security
 from app.exceptions import UserAlreadyExistsError, UserNotFoundError
-from app.filters import UserFilter
+from app.filters import UserFilterParams
 from app.models import Project, User
 from app.schemas import UserCreate, UserSummary
+from app.utils import apply_filters, apply_ordering
 
 
 async def create_user_with_project(db: AsyncSession, payload: UserCreate) -> User:
@@ -53,8 +54,9 @@ async def get_user(db: AsyncSession, user_id: int) -> User:
     return user
 
 
-async def list_users(session: AsyncSession, filters: UserFilter) -> list[UserSummary]:
-    query = filters.sort(filters.filter(select(User)))
+async def list_users(session: AsyncSession, filters: UserFilterParams) -> list[UserSummary]:
+    query = apply_filters(select(User), User, filters)
+    query = apply_ordering(query, User, filters.order_by)
     result = await session.execute(query)
     return [UserSummary.model_validate(user) for user in result.scalars().all()]
 
