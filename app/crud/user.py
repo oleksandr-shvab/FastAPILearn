@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core import security
-from app.enums import ProjectRole
+from app.crud import role as role_crud
 from app.exceptions import UserAlreadyExistsError, UserNotFoundError
 from app.filters import UserFilterParams
 from app.models import OAuthAccount, Project, ProjectMember, User
@@ -17,13 +17,14 @@ _USERNAME_COLLISION_RETRIES = 3
 
 
 async def create_user_with_project(db: AsyncSession, payload: UserCreate) -> User:
+    owner_role = await role_crud.get_role_by_name(db, "owner")
     user = User(
         username=payload.username,
         email=payload.email,
         hashed_password=await security.hash_password(payload.password.get_secret_value()),
     )
     user.project_memberships.append(
-        ProjectMember(project=Project(name=f"{payload.username} Project"), role=ProjectRole.owner)
+        ProjectMember(project=Project(name=f"{payload.username} Project"), role=owner_role)
     )
     db.add(user)
     try:
@@ -110,12 +111,13 @@ async def get_or_create_oauth_user(
             await db.commit()
             return existing
 
+    owner_role = await role_crud.get_role_by_name(db, "owner")
     base_username = email.split("@", 1)[0][:50]
     for suffix in ("", *(uuid4().hex[:6] for _ in range(_USERNAME_COLLISION_RETRIES))):
         username = (base_username + suffix)[:50]
         user = User(username=username, email=email)
         user.project_memberships.append(
-            ProjectMember(project=Project(name=f"{username} Project"), role=ProjectRole.owner)
+            ProjectMember(project=Project(name=f"{username} Project"), role=owner_role)
         )
         user.oauth_accounts.append(OAuthAccount(provider=provider, provider_user_id=provider_user_id))
         db.add(user)

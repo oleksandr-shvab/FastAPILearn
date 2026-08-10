@@ -72,6 +72,15 @@ class MembershipNotFoundError(AppError):
         super().__init__(project_id=project_id, user_id=user_id)
 
 
+class RoleNotFoundError(AppError):
+    status_code = 404
+    code = "role_not_found"
+    message_template = "Role '{name}' not found"
+
+    def __init__(self, name: str) -> None:
+        super().__init__(name=name)
+
+
 class LastOwnerError(AppError):
     status_code = 409
     code = "last_owner"
