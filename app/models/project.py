@@ -1,13 +1,13 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, ForeignKey, String, UniqueConstraint, func
+from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db import Base
-from app.enums import ProjectRole
 
 if TYPE_CHECKING:
+    from app.models.role import Role
     from app.models.user import User
 
 
@@ -34,8 +34,12 @@ class ProjectMember(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    role: Mapped[ProjectRole] = mapped_column(Enum(ProjectRole, name="project_role"))
+    role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"))
     joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     project: Mapped["Project"] = relationship(back_populates="members")
     user: Mapped["User"] = relationship(back_populates="project_memberships")
+    role: Mapped["Role"] = relationship(lazy="selectin")
+
+    def has_permission(self, codename: str) -> bool:
+        return any(p.codename == codename for p in self.role.permissions)

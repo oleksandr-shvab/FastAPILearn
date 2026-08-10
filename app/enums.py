@@ -1,6 +1,5 @@
 import enum
 
 
-class ProjectRole(str, enum.Enum):
-    owner = "owner"
-    member = "member"
+class ProjectPermission(str, enum.Enum):
+    MEMBERS_MANAGE = "project.members.manage"
