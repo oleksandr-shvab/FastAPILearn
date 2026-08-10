@@ -61,7 +61,7 @@ async def add_member(
     project_id: int,
     payload: ProjectMemberCreate,
     db: AsyncSession = Depends(get_db),
-    _: ProjectMember = Depends(require_project_permission(ProjectPermission.MEMBERS_MANAGE)),
+    _: ProjectMember = Depends(require_project_permission(ProjectPermission.MEMBERS_ADD)),
 ):
     return await project_crud.add_member(db, project_id, payload.user_id, payload.role)
 
