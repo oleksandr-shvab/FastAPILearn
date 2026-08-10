@@ -52,3 +52,39 @@ class InvalidGoogleTokenError(AppError):
     status_code = 401
     code = "invalid_google_token"
     message_template = "Invalid or unverifiable Google token"
+
+
+class MembershipAlreadyExistsError(AppError):
+    status_code = 409
+    code = "membership_already_exists"
+    message_template = "User {user_id} is already a member of project {project_id}"
+
+    def __init__(self, project_id: int, user_id: int) -> None:
+        super().__init__(project_id=project_id, user_id=user_id)
+
+
+class MembershipNotFoundError(AppError):
+    status_code = 404
+    code = "membership_not_found"
+    message_template = "User {user_id} is not a member of project {project_id}"
+
+    def __init__(self, project_id: int, user_id: int) -> None:
+        super().__init__(project_id=project_id, user_id=user_id)
+
+
+class RoleNotFoundError(AppError):
+    status_code = 404
+    code = "role_not_found"
+    message_template = "Role '{name}' not found"
+
+    def __init__(self, name: str) -> None:
+        super().__init__(name=name)
+
+
+class LastOwnerError(AppError):
+    status_code = 409
+    code = "last_owner"
+    message_template = "Project {project_id} must have at least one owner"
+
+    def __init__(self, project_id: int) -> None:
+        super().__init__(project_id=project_id)

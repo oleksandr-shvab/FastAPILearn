@@ -2,7 +2,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr, model_va
 from zxcvbn import zxcvbn
 
 from app.core.security import MAX_PASSWORD_BYTES
-from app.schemas.project import ProjectRead
+from app.schemas.project import ProjectMembershipRead
 
 _MIN_PASSWORD_SCORE = 2  # zxcvbn scores 0 (weak) - 4 (strong)
 
@@ -29,7 +29,7 @@ class UserRead(BaseModel):
     username: str
     email: str
     is_admin: bool
-    projects: list[ProjectRead] = []
+    project_memberships: list[ProjectMembershipRead] = []
 
     model_config = ConfigDict(from_attributes=True)
 

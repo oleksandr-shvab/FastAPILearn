@@ -7,7 +7,7 @@ from app.core.db import Base
 
 if TYPE_CHECKING:
     from app.models.auth import OAuthAccount, RefreshToken
-    from app.models.project import Project
+    from app.models.project import ProjectMember
 
 
 class User(Base):
@@ -19,8 +19,8 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String(255), server_default="")
     is_admin: Mapped[bool] = mapped_column(default=False, server_default="false")
 
-    projects: Mapped[list["Project"]] = relationship(
-        back_populates="owner", cascade="all, delete-orphan"
+    project_memberships: Mapped[list["ProjectMember"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
     )
     refresh_tokens: Mapped[list["RefreshToken"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"

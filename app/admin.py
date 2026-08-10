@@ -10,7 +10,7 @@ from app.core.config import settings
 from app.core.db import AsyncSessionLocal, engine
 from app.crud import auth as auth_crud, user as user_crud
 from app.exceptions import InvalidCredentialsError, UserNotFoundError
-from app.models import Project, RefreshToken, User
+from app.models import Permission, Project, ProjectMember, RefreshToken, Role, User
 
 
 class AdminAuth(AuthenticationBackend):
@@ -65,8 +65,23 @@ class UserAdmin(ModelView, model=User):
 
 
 class ProjectAdmin(ModelView, model=Project):
-    column_list = [Project.id, Project.name, Project.owner]
-    form_columns = [Project.name, Project.owner]
+    column_list = [Project.id, Project.name]
+    form_columns = [Project.name]
+
+
+class ProjectMemberAdmin(ModelView, model=ProjectMember):
+    column_list = [ProjectMember.id, ProjectMember.project, ProjectMember.user, ProjectMember.role]
+    form_columns = [ProjectMember.project, ProjectMember.user, ProjectMember.role]
+
+
+class RoleAdmin(ModelView, model=Role):
+    column_list = [Role.id, Role.name, Role.description, Role.permissions]
+    form_columns = [Role.name, Role.description, Role.permissions]
+
+
+class PermissionAdmin(ModelView, model=Permission):
+    column_list = [Permission.id, Permission.codename, Permission.description]
+    form_columns = [Permission.codename, Permission.description]
 
 
 class RefreshTokenAdmin(ModelView, model=RefreshToken):
@@ -86,4 +101,7 @@ def init_admin(app: FastAPI) -> None:
     admin = Admin(app, engine, authentication_backend=authentication_backend)
     admin.add_view(UserAdmin)
     admin.add_view(ProjectAdmin)
+    admin.add_view(ProjectMemberAdmin)
+    admin.add_view(RoleAdmin)
+    admin.add_view(PermissionAdmin)
     admin.add_view(RefreshTokenAdmin)

@@ -6,9 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core import security
+from app.crud import role as role_crud
 from app.exceptions import UserAlreadyExistsError, UserNotFoundError
 from app.filters import UserFilterParams
-from app.models import OAuthAccount, Project, User
+from app.models import OAuthAccount, Project, ProjectMember, User
 from app.schemas import UserCreate, UserSummary
 from app.utils import apply_filters, apply_ordering
 
@@ -16,19 +17,21 @@ _USERNAME_COLLISION_RETRIES = 3
 
 
 async def create_user_with_project(db: AsyncSession, payload: UserCreate) -> User:
+    owner_role = await role_crud.get_role_by_name(db, "owner")
     user = User(
         username=payload.username,
         email=payload.email,
         hashed_password=await security.hash_password(payload.password.get_secret_value()),
     )
-    user.projects.append(Project(name=f"{payload.username} Project"))
+    user.project_memberships.append(
+        ProjectMember(project=Project(name=f"{payload.username} Project"), role=owner_role)
+    )
     db.add(user)
     try:
         await db.commit()
     except IntegrityError:
         await db.rollback()
         raise UserAlreadyExistsError(payload.username, payload.email)
-    await db.refresh(user, attribute_names=["projects"])
     return user
 
 
@@ -50,7 +53,9 @@ async def create_superuser(db: AsyncSession, payload: UserCreate) -> User:
 
 async def get_user(db: AsyncSession, user_id: int) -> User:
     result = await db.execute(
-        select(User).where(User.id == user_id).options(selectinload(User.projects))
+        select(User)
+        .where(User.id == user_id)
+        .options(selectinload(User.project_memberships).selectinload(ProjectMember.project))
     )
     user = result.scalar_one_or_none()
     if user is None:
@@ -80,7 +85,7 @@ async def get_user_by_oauth_account(
             OAuthAccount.provider == provider,
             OAuthAccount.provider_user_id == provider_user_id,
         )
-        .options(selectinload(User.projects))
+        .options(selectinload(User.project_memberships).selectinload(ProjectMember.project))
     )
     return result.scalar_one_or_none()
 
@@ -94,7 +99,9 @@ async def get_or_create_oauth_user(
 
     if email_verified:
         result = await db.execute(
-            select(User).where(User.email == email).options(selectinload(User.projects))
+            select(User)
+            .where(User.email == email)
+            .options(selectinload(User.project_memberships).selectinload(ProjectMember.project))
         )
         existing = result.scalar_one_or_none()
         if existing is not None:
@@ -102,14 +109,16 @@ async def get_or_create_oauth_user(
                 OAuthAccount(provider=provider, provider_user_id=provider_user_id)
             )
             await db.commit()
-            await db.refresh(existing, attribute_names=["projects"])
             return existing
 
+    owner_role = await role_crud.get_role_by_name(db, "owner")
     base_username = email.split("@", 1)[0][:50]
     for suffix in ("", *(uuid4().hex[:6] for _ in range(_USERNAME_COLLISION_RETRIES))):
         username = (base_username + suffix)[:50]
         user = User(username=username, email=email)
-        user.projects.append(Project(name=f"{username} Project"))
+        user.project_memberships.append(
+            ProjectMember(project=Project(name=f"{username} Project"), role=owner_role)
+        )
         user.oauth_accounts.append(OAuthAccount(provider=provider, provider_user_id=provider_user_id))
         db.add(user)
         try:
@@ -117,6 +126,5 @@ async def get_or_create_oauth_user(
         except IntegrityError:
             await db.rollback()
             continue
-        await db.refresh(user, attribute_names=["projects"])
         return user
     raise UserAlreadyExistsError(base_username, email)

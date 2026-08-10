@@ -5,9 +5,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import security
 from app.core.db import get_db
-from app.crud import user as user_crud
+from app.crud import project as project_crud, user as user_crud
+from app.enums import ProjectPermission
 from app.exceptions import UserNotFoundError
-from app.models import User
+from app.models import ProjectMember, User
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
@@ -36,3 +37,19 @@ async def require_admin(current_user: User = Depends(get_current_user)) -> User:
     if not current_user.is_admin:
         raise HTTPException(status_code=403, detail="Admin privileges required")
     return current_user
+
+
+def require_project_permission(*permissions: ProjectPermission):
+    async def dependency(
+        project_id: int,
+        current_user: User = Depends(get_current_user),
+        db: AsyncSession = Depends(get_db),
+    ) -> ProjectMember:
+        membership = await project_crud.get_membership(db, project_id, current_user.id)
+        if membership is None:
+            raise HTTPException(status_code=404, detail="Project not found")
+        if permissions and not any(membership.has_permission(p.value) for p in permissions):
+            raise HTTPException(status_code=403, detail="Insufficient project permissions")
+        return membership
+
+    return dependency
