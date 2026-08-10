@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.enums import ProjectRole
+from app.schemas.role import RoleRead
 
 
 class ProjectCreate(BaseModel):
@@ -16,18 +16,18 @@ class ProjectMemberUser(BaseModel):
 
 class ProjectMemberRead(BaseModel):
     user: ProjectMemberUser
-    role: ProjectRole
+    role: RoleRead
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class ProjectMemberCreate(BaseModel):
     user_id: int
-    role: ProjectRole = ProjectRole.member
+    role: str = Field("member", min_length=1, max_length=50)
 
 
 class ProjectMemberRoleUpdate(BaseModel):
-    role: ProjectRole
+    role: str = Field(min_length=1, max_length=50)
 
 
 class ProjectRead(ProjectCreate):
@@ -46,6 +46,6 @@ class ProjectSummary(BaseModel):
 
 class ProjectMembershipRead(BaseModel):
     project: ProjectSummary
-    role: ProjectRole
+    role: RoleRead
 
     model_config = ConfigDict(from_attributes=True)

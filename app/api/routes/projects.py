@@ -3,10 +3,10 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, require_admin, require_project_role
+from app.api.deps import get_current_user, require_admin, require_project_permission
 from app.core.db import get_db
 from app.crud import project as project_crud
-from app.enums import ProjectRole
+from app.enums import ProjectPermission
 from app.filters import ProjectFilterParams
 from app.models import ProjectMember, User
 from app.schemas import (
@@ -51,7 +51,7 @@ async def list_my_projects(
 async def list_members(
     project_id: int,
     db: AsyncSession = Depends(get_db),
-    _: ProjectMember = Depends(require_project_role()),
+    _: ProjectMember = Depends(require_project_permission()),
 ):
     return await project_crud.list_members(db, project_id)
 
@@ -61,7 +61,7 @@ async def add_member(
     project_id: int,
     payload: ProjectMemberCreate,
     db: AsyncSession = Depends(get_db),
-    _: ProjectMember = Depends(require_project_role(ProjectRole.owner)),
+    _: ProjectMember = Depends(require_project_permission(ProjectPermission.MEMBERS_MANAGE)),
 ):
     return await project_crud.add_member(db, project_id, payload.user_id, payload.role)
 
@@ -72,7 +72,7 @@ async def update_member_role(
     user_id: int,
     payload: ProjectMemberRoleUpdate,
     db: AsyncSession = Depends(get_db),
-    _: ProjectMember = Depends(require_project_role(ProjectRole.owner)),
+    _: ProjectMember = Depends(require_project_permission(ProjectPermission.MEMBERS_MANAGE)),
 ):
     return await project_crud.update_member_role(db, project_id, user_id, payload.role)
 
@@ -82,6 +82,6 @@ async def remove_member(
     project_id: int,
     user_id: int,
     db: AsyncSession = Depends(get_db),
-    _: ProjectMember = Depends(require_project_role(ProjectRole.owner)),
+    _: ProjectMember = Depends(require_project_permission(ProjectPermission.MEMBERS_MANAGE)),
 ):
     await project_crud.remove_member(db, project_id, user_id)

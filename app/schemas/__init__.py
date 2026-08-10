@@ -9,6 +9,7 @@ from app.schemas.project import (
     ProjectRead,
     ProjectSummary,
 )
+from app.schemas.role import RoleRead
 from app.schemas.user import UserCreate, UserRead, UserSummary
 
 __all__ = [
@@ -22,6 +23,7 @@ __all__ = [
     "ProjectSummary",
     "RefreshTokenRequest",
     "RegisterResponse",
+    "RoleRead",
     "Token",
     "UserCreate",
     "UserRead",
